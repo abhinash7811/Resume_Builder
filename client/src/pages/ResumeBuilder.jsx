@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { dummyResumeData } from '../assets/assets'
 import { ArrowLeftIcon, Briefcase, ChevronLeft, ChevronRight, DownloadIcon, EyeIcon, EyeOffIcon, FileText, FolderIcon, GraduationCap, Share2Icon, Sparkles, User } from 'lucide-react'
 import PersonalInfoForm from '../components/PersonalInfoForm'
 import ResumePreview from '../components/ResumePreview'
@@ -34,7 +33,7 @@ const ResumeBuilder = () => {
     public: false,
   })
 
-  const loadExistingResume = async () => {
+  const loadExistingResume = useCallback(async () => {
    try {
     const {data} = await api.get('/api/resumes/get/' + resumeId, {headers: { Authorization: token }})
     if(data.resume){
@@ -44,7 +43,7 @@ const ResumeBuilder = () => {
    } catch (error) {
     console.log(error.message)
    }
-  }
+  }, [resumeId, token])
 
   const [activeSectionIndex, setActiveSectionIndex] = useState(0)
   const [removeBackground, setRemoveBackground] = useState(false);
@@ -62,7 +61,7 @@ const ResumeBuilder = () => {
 
   useEffect(()=>{
     loadExistingResume()
-  },[])
+  },[loadExistingResume])
 
   const changeResumeVisibility = async () => {
     try {
@@ -80,7 +79,7 @@ const ResumeBuilder = () => {
   }
 
   const handleShare = () =>{
-    const frontendUrl = window.location.href.split('/app/')[0];
+    const frontendUrl = window.location.origin;
     const resumeUrl = frontendUrl + '/view/' + resumeId;
 
     if(navigator.share){
@@ -123,7 +122,7 @@ const saveResume = async () => {
     <div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <Link to={'/app'} className='inline-flex gap-2 items-center text-slate-500 hover:text-slate-700 transition-all'>
+        <Link to={'/dashboard'} className='inline-flex gap-2 items-center text-slate-500 hover:text-slate-700 transition-all'>
           <ArrowLeftIcon className="size-4"/> Back to Dashboard
         </Link>
       </div>

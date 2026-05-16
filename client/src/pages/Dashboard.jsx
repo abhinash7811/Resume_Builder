@@ -1,11 +1,11 @@
-import { FilePenLineIcon, LoaderCircleIcon, PencilIcon, PlusIcon, TrashIcon, UploadCloud, UploadCloudIcon, XIcon } from 'lucide-react'
-import React, { useEffect, useState } from 'react'
-import { dummyResumeData } from '../assets/assets'
+import { BarChart3Icon, EyeIcon, FilePenLineIcon, LoaderCircleIcon, PencilIcon, PlusIcon, SearchIcon, SparklesIcon, TrashIcon, UploadCloud, UploadCloudIcon, XIcon } from 'lucide-react'
+import React, { useCallback, useEffect, useState } from 'react'
 import {useNavigate} from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import api from '../configs/api'
 import toast from 'react-hot-toast'
 import pdfToText from 'react-pdftotext'
+import ResumePreview from '../components/ResumePreview'
 
 const Dashboard = () => {
 
@@ -18,19 +18,21 @@ const Dashboard = () => {
   const [title, setTitle] = useState('')
   const [resume, setResume] = useState(null)
   const [editResumeId, setEditResumeId] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [previewResume, setPreviewResume] = useState(null)
 
   const [isLoading, setIsLoading] = useState(false)
 
   const navigate = useNavigate()
 
-  const loadAllResumes = async () =>{
+  const loadAllResumes = useCallback(async () =>{
     try {
       const { data } = await api.get('/api/users/resumes', {headers: { Authorization: token }})
       setAllResumes(data.resumes)
     } catch (error) {
       toast.error(error?.response?.data?.message || error.message)
     }
-  }
+  }, [token])
 
   const createResume = async (event) => {
    try {
@@ -39,7 +41,7 @@ const Dashboard = () => {
     setAllResumes([...allResumes, data.resume])
     setTitle('')
     setShowCreateResume(false)
-    navigate(`/app/builder/${data.resume._id}`)
+    navigate(`/dashboard/builder/${data.resume._id}`)
    } catch (error) {
     toast.error(error?.response?.data?.message || error.message)
    }
@@ -54,7 +56,7 @@ const Dashboard = () => {
       setTitle('')
       setResume(null)
       setShowUploadResume(false)
-      navigate(`/app/builder/${data.resumeId}`)
+      navigate(`/dashboard/builder/${data.resumeId}`)
     } catch (error) {
       toast.error(error?.response?.data?.message || error.message)
     }
@@ -91,13 +93,45 @@ const Dashboard = () => {
 
   useEffect(()=>{
     loadAllResumes()
-  },[])
+  },[loadAllResumes])
+
+  const filteredResumes = allResumes.filter((resume) => resume.title?.toLowerCase().includes(searchQuery.toLowerCase()))
+  const publicCount = allResumes.filter((resume) => resume.public).length
+  const updatedThisWeek = allResumes.filter((resume) => {
+    const updatedAt = new Date(resume.updatedAt).getTime()
+    return Date.now() - updatedAt < 7 * 24 * 60 * 60 * 1000
+  }).length
 
   return (
     <div>
-      <div className='max-w-7xl mx-auto px-4 py-8'>
+      <div className='max-w-7xl mx-auto'>
 
-        <p className='text-2xl font-medium mb-6 bg-gradient-to-r from-slate-600 to-slate-700 bg-clip-text text-transparent sm:hidden'>Welcome, Joe Doe</p>
+        <div className='flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 mb-6'>
+          <div>
+            <p className='text-sm text-green-600 font-semibold'>Dashboard</p>
+            <h1 className='text-2xl md:text-3xl font-semibold bg-gradient-to-r from-slate-700 to-slate-900 bg-clip-text text-transparent'>Welcome back, {user?.name || 'there'}</h1>
+            <p className='text-sm text-slate-500 mt-1'>Manage resumes, templates, exports, and upcoming AI workflows from one workspace.</p>
+          </div>
+          <div className='flex items-center gap-2 bg-white border border-slate-200 rounded-full px-4 h-11 shadow-sm max-w-md w-full lg:w-96'>
+            <SearchIcon className='size-4 text-slate-400'/>
+            <input value={searchQuery} onChange={(event)=> setSearchQuery(event.target.value)} className='border-none focus:ring-0 h-10 flex-1 text-sm' placeholder='Search saved resumes'/>
+          </div>
+        </div>
+
+        <div className='grid md:grid-cols-4 gap-4 mb-7'>
+          {[
+            { label: 'Total resumes', value: allResumes.length, icon: <FilePenLineIcon className='size-5 text-green-600'/> },
+            { label: 'Public resumes', value: publicCount, icon: <EyeIcon className='size-5 text-green-600'/> },
+            { label: 'Updated this week', value: updatedThisWeek, icon: <BarChart3Icon className='size-5 text-green-600'/> },
+            { label: 'AI actions ready', value: 'Soon', icon: <SparklesIcon className='size-5 text-green-600'/> },
+          ].map((item) => (
+            <div key={item.label} className='bg-white border border-slate-200 rounded-lg p-5 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition'>
+              {item.icon}
+              <p className='text-2xl font-semibold text-slate-800 mt-3'>{item.value}</p>
+              <p className='text-sm text-slate-500'>{item.label}</p>
+            </div>
+          ))}
+        </div>
 
         <div className='flex gap-4 '>
             <button onClick={()=> setShowCreateResume(true)} className='w-full bg-white sm:max-w-36 h-48 flex flex-col items-center justify-center rounded-lg gap-2 text-slate-600 border border-dashed border-slate-300 group hover:border-indigo-500 hover:shadow-lg transition-all duration-300 cursor-pointer'>
@@ -113,10 +147,10 @@ const Dashboard = () => {
       <hr className='border-slate-300 my-6 sm:w-[305px]' />
 
       <div className="grid grid-cols-2 sm:flex flex-wrap gap-4 ">
-        {allResumes.map((resume, index)=>{
+        {filteredResumes.map((resume, index)=>{
           const baseColor = colors[index % colors.length];
           return (
-            <button key={index} onClick={()=> navigate(`/app/builder/${resume._id}`)} className='relative w-full sm:max-w-36 h-48 flex flex-col items-center justify-center rounded-lg gap-2 border group hover:shadow-lg transition-all duration-300 cursor-pointer' style={{background: `linear-gradient(135deg, ${baseColor}10, ${baseColor}40)`, borderColor: baseColor + '40'}}>
+            <button key={resume._id || index} onClick={()=> navigate(`/dashboard/builder/${resume._id}`)} className='relative w-full sm:max-w-36 h-48 flex flex-col items-center justify-center rounded-lg gap-2 border group hover:shadow-lg transition-all duration-300 cursor-pointer' style={{background: `linear-gradient(135deg, ${baseColor}10, ${baseColor}40)`, borderColor: baseColor + '40'}}>
 
               <FilePenLineIcon className="size-7 group-hover:scale-105 transition-all " style={{ color: baseColor }}/>
               <p className='text-sm group-hover:scale-105 transition-all  px-2 text-center' style={{ color: baseColor }}>{resume.title}</p>
@@ -124,12 +158,35 @@ const Dashboard = () => {
                  Updated on {new Date(resume.updatedAt).toLocaleDateString()}
               </p>
               <div onClick={e=> e.stopPropagation()} className='absolute top-1 right-1 group-hover:flex items-center hidden'>
+                <EyeIcon onClick={()=> setPreviewResume(resume)} className="size-7 p-1.5 hover:bg-white/50 rounded text-slate-700 transition-colors"/>
                 <TrashIcon onClick={()=>deleteResume(resume._id)} className="size-7 p-1.5 hover:bg-white/50 rounded text-slate-700 transition-colors"/>
                 <PencilIcon onClick={()=> {setEditResumeId(resume._id); setTitle(resume.title)}} className="size-7 p-1.5 hover:bg-white/50 rounded text-slate-700 transition-colors"/>
               </div>
             </button>
           )
         })}
+        {filteredResumes.length === 0 && (
+          <div className='col-span-full rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center'>
+            <FilePenLineIcon className='size-10 text-slate-300 mx-auto'/>
+            <p className='font-medium text-slate-700 mt-3'>No resumes found</p>
+            <p className='text-sm text-slate-500 mt-1'>Create a new resume or adjust your search to find saved work.</p>
+          </div>
+        )}
+      </div>
+
+      <div className='grid lg:grid-cols-3 gap-5 mt-8'>
+        <div className='rounded-lg border border-slate-200 bg-white p-6'>
+          <h2 className='font-semibold text-slate-800'>Template selection</h2>
+          <p className='text-sm text-slate-500 mt-2'>Classic, Modern, Minimal, and image templates are available inside the builder.</p>
+        </div>
+        <div className='rounded-lg border border-slate-200 bg-white p-6'>
+          <h2 className='font-semibold text-slate-800'>Export center</h2>
+          <p className='text-sm text-slate-500 mt-2'>PDF download and share controls are ready in each resume workspace.</p>
+        </div>
+        <div className='rounded-lg border border-slate-200 bg-white p-6'>
+          <h2 className='font-semibold text-slate-800'>Settings structure</h2>
+          <p className='text-sm text-slate-500 mt-2'>Profile, notifications, billing, and team settings can plug into the dashboard shell.</p>
+        </div>
       </div>
 
         {showCreateResume && (
@@ -189,6 +246,23 @@ const Dashboard = () => {
           </form>
         )
         }
+
+        {previewResume && (
+          <div onClick={()=> setPreviewResume(null)} className='fixed inset-0 bg-black/70 backdrop-blur bg-opacity-50 z-20 flex items-center justify-center p-4'>
+            <div onClick={e => e.stopPropagation()} className='relative bg-white border shadow-md rounded-lg w-full max-w-3xl max-h-[90vh] overflow-auto p-6'>
+              <div className='flex items-center justify-between mb-4'>
+                <div>
+                  <h2 className='text-xl font-bold'>{previewResume.title}</h2>
+                  <p className='text-sm text-slate-500'>Resume preview modal</p>
+                </div>
+                <button onClick={()=> setPreviewResume(null)} className='size-9 rounded-full hover:bg-slate-100 flex items-center justify-center'>
+                  <XIcon className='size-5 text-slate-500'/>
+                </button>
+              </div>
+              <ResumePreview data={previewResume} template={previewResume.template} accentColor={previewResume.accent_color} classes='py-4 bg-white'/>
+            </div>
+          </div>
+        )}
       
       </div>
     </div>
